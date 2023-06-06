@@ -1,0 +1,39 @@
+Syslog
+| where Computer == "aldserver"
+|extend DeviceVendor = tostring(split(SyslogMessage,"|")[1])
+    , DeviceProduct = tostring(split(SyslogMessage,"|")[2])
+    , DeviceVersion = tostring(split(SyslogMessage,"|")[3])
+    , DeviceEventClassID = tostring(split(SyslogMessage,"|")[4])
+    , DeviceEventName = tostring(split(SyslogMessage,"|")[5])
+    , DeviceSeverity = tostring(split(SyslogMessage,"|")[6])
+    , CefEvent = tostring(split(SyslogMessage,"|")[7])
+| where DeviceEventName == "ServerActivityMessage"
+// KQL is stupid and I had to rename the datetime field because parse-kv didn't like 
+// having a data type name as a a field name. So I have renamed it with the below statement
+| extend CefEvent = replace_string(CefEvent, "datetime", "eventstarttime")
+| parse-kv CefEvent as (event:string
+    , eventstarttime:datetime
+    , task:string
+    , user:string
+    , description:string
+) with (pair_delimiter=' ', kv_delimiter='=', greedy=true)
+| extend EventSchema = "AuditEvent"
+    , EventSchemaVersion = "0.1"
+    , EventType = case(task == "Repository Add", "Create"
+        , task == "Definition Generation", "Create"
+        , task == "Policy Modify", "Set"
+        , task == "Definition Generation", "Create"
+        , task == "Definition Diff Generation", "Create"
+        , "Other")
+| project-rename DvcHostname = Computer, 
+    EventProduct = DeviceProduct, 
+    EventVendor = DeviceVendor, 
+    DvcVersion = DeviceVersion, 
+    ActorUserName = user, 
+    Operation = task, 
+    EventMessage = description,
+    EventStartTime = eventstarttime
+| extend Dvc = DvcHostname,
+    User = ActorUserName
+| project-away Device*,CefEvent,SyslogMessage,Facility,HostName,SeverityLevel,Process*,Type,event,TenantId,SourceSystem
+| project-reorder EventStartTime,Operation,User,EventMessage
