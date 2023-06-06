@@ -1,5 +1,5 @@
 Syslog
-| where Computer == "aldserver"
+| where Computer == "airlock_server"
 |extend DeviceVendor = tostring(split(SyslogMessage,"|")[1])
     , DeviceProduct = tostring(split(SyslogMessage,"|")[2])
     , DeviceVersion = tostring(split(SyslogMessage,"|")[3])
