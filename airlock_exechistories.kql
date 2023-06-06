@@ -50,6 +50,8 @@ Syslog
     , ParentProcessName = parentprocess
 | extend Dvc = DvcHostname
     , User = TargetUserName
+    , Hash = TargetProcessSHA1
+    , HashType = "SHA"
 | project-away Device*
     , CefEvent
     , SyslogMessage
